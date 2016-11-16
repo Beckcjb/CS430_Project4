@@ -246,7 +246,10 @@ int read_scene(FILE *json, Object objects[]){
 				}
 				else{
 					skip_ws(json);
-					objects[items].structures.sphere.reflectivity = next_num(json);
+					if(strcmp(objects[items].type, "plane") == 0){
+							objects[items].structures.plane.reflectivity  = next_num(json);}
+                     else if(strcmp(objects[items].type, "sphere") == 0){
+							objects[items].structures.sphere.reflectivity  = next_num(json);}
 				}
 
 			}
@@ -261,9 +264,11 @@ int read_scene(FILE *json, Object objects[]){
 				}
 				else{
 					skip_ws(json);
-					objects[items].structures.sphere.refractivity = next_num(json);
-				}
-
+                    if(strcmp(objects[items].type, "plane") == 0){
+						objects[items].structures.plane.refractivity  = next_num(json);}
+                    else if(strcmp(objects[items].type, "sphere") == 0){
+						objects[items].structures.sphere.refractivity  = next_num(json);}		
+				}				
 			} 
 			else if(strcmp(key, "ior") == 0) {
 				skip_ws(json);
@@ -276,9 +281,12 @@ int read_scene(FILE *json, Object objects[]){
 				}
 				else{
 					skip_ws(json);
-					objects[items].structures.sphere.ior = next_num(json);
+                   if(strcmp(objects[items].type, "plane") == 0){
+					   objects[items].stuctures.plane.ior  = next_num(json);}
+                   else if(strcmp(objects[items].type, "sphere") == 0){
+					   objects[items].stuctures.sphere.ior  = next_num(json);}
 				}
-			
+			}
 			else if(strcmp(key, "radial-a2") == 0) {
 				skip_ws(json);
 				c = next_c(json);
