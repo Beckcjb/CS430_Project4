@@ -234,9 +234,52 @@ int read_scene(FILE *json, Object objects[]){
 					skip_ws(json);
 					objects[items].structures.sphere.radius = next_num(json);
 				}
-			} 
-			else if(strcmp(key, "radial-a2") == 0) {
+			}
+			else if(strcmp(key, "reflectivity") == 0) {
+				skip_ws(json);
+				c = next_c(json);
 
+				if(c != ':'){
+					fprintf(stderr, "Error, line number %d; invalid separator '%c'.\n", lineNumber, c);
+					fclose(json);
+					exit(-1);
+				}
+				else{
+					skip_ws(json);
+					objects[items].structures.sphere.reflectivity = next_num(json);
+				}
+
+			}
+			else if(strcmp(key, "refractivity") == 0) {
+				skip_ws(json);
+				c = next_c(json);
+
+				if(c != ':'){
+					fprintf(stderr, "Error, line number %d; invalid separator '%c'.\n", lineNumber, c);
+					fclose(json);
+					exit(-1);
+				}
+				else{
+					skip_ws(json);
+					objects[items].structures.sphere.refractivity = next_num(json);
+				}
+
+			} 
+			else if(strcmp(key, "ior") == 0) {
+				skip_ws(json);
+				c = next_c(json);
+
+				if(c != ':'){
+					fprintf(stderr, "Error, line number %d; invalid separator '%c'.\n", lineNumber, c);
+					fclose(json);
+					exit(-1);
+				}
+				else{
+					skip_ws(json);
+					objects[items].structures.sphere.ior = next_num(json);
+				}
+			
+			else if(strcmp(key, "radial-a2") == 0) {
 				skip_ws(json);
 				c = next_c(json);
 
@@ -251,7 +294,6 @@ int read_scene(FILE *json, Object objects[]){
 				}
 			} 
 			else if(strcmp(key, "radial-a1") == 0) {
-
 				skip_ws(json);
 				c = next_c(json);
 
@@ -266,7 +308,6 @@ int read_scene(FILE *json, Object objects[]){
 				}
 			} 
 			else if(strcmp(key, "radial-a0") == 0) {
-
 				skip_ws(json);
 				c = next_c(json);
 
@@ -281,7 +322,6 @@ int read_scene(FILE *json, Object objects[]){
 				}
 			} 
 			else if(strcmp(key, "angular-a0") == 0) {
-
 				skip_ws(json);
 				c = next_c(json);
 

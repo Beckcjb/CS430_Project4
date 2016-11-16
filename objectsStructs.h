@@ -34,6 +34,9 @@ typedef struct Sphere
 	double diffuseColor[3];
 	double specularColor[3];
     double position[3];
+	double reflectivity;
+    double refractivity;
+    double ior;
 	double radius;
 
 } Sphere;

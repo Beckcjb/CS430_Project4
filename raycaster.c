@@ -1,7 +1,7 @@
 // Charles Beck
 // CS 430
-// 10/16/16
-// PROJECT 3: RAYCASTER With ILLUMINATION
+// 11/15/16
+// PROJECT 4: RAYTRACER
 // ==================================================================================
 /* 	   
 	   This program reads in five arguments from the comand line in the order of :
@@ -32,24 +32,24 @@
 
 Object objects[128];
 
-static inline double sqr(double v)
-{
+static inline double sqr(double v){
   return v*v;
 }
-static inline double v3_len(double* x)
-{
+
+static inline double v3_len(double* x){
     return sqrt(sqr(x[0]) + sqr(x[1]) + sqr(x[2]));
 }
 
-static inline void normalize(double* v)
-{
+static inline void normalize(double* v){
   double len = sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2]));
   v[0] /= len;
   v[1] /= len;
   v[2] /= len;
 }
 
-
+static inline double fres_calc(double a, double b, double m){
+    return b * m + a * (1 - m);
+}
 
 void v3_reflect(double* x, double* y, double* z)
 {
@@ -290,7 +290,6 @@ int ray_cast(Object objects[], Pixmap * buffer, double width, double height, int
 			Rd[0] = point[0];
             Rd[1] = point[1];
             Rd[2] = point[2];
-            //normalize(Rd);
 
             double best_t = INFINITY;
 
@@ -323,69 +322,126 @@ int ray_cast(Object objects[], Pixmap * buffer, double width, double height, int
                 {
                     if(strcmp(objects[best_i].type, "sphere") == 0)
                     { 
-                        color[0] = 0;
-                        color[1] = 0;
-                        color[2] = 0;
+                        double reflect = objects[best_i].structures.sphere.reflectivity;
+                        double refract = objects[best_i].structures.sphere.refractivity;
+                        double indexOfRefraction = objects[best_i].structures.sphere.ior;
                     
-                        for (l = 0; l < items; l++)
+
+                        if(reflect >= 0 || refract >= 0 || indexOfRefraction >=0)
                         {
-                            // Look for a light to see if that object has a shadow casted on it by a light
-                            if(strcmp(objects[l].type, "light") == 0)
-                            {   
-                                double temp[3];
-                                double Ron[3];
-                                double Rdn[3];
-                                v3_scale(Rd, best_t, temp);
-                                v3_add(temp, Ro, Ron);
-                                v3_subtract(objects[l].structures.light.position, Ron, Rdn);
+                            double temp[3];
+                            double Ron[3];
+                            double Rdn[3];
+                            v3_scale(Rd, best_t, temp);
+                            v3_add(temp, Ro, Ron);
+                            v3_subtract(Ron, objects[best_i].structures.sphere.position, Rdn);
 
-                                double distanceTLight = v3_len(Rdn);
-                                normalize(Rdn);
-
-                                double shadow_intersect = shadows(objects, Rdn, Ron, items, best_i, distanceTLight);
-                                if(shadow_intersect != -1)
-                                {  
-
-                                    continue;
-                                }
-                                else
-                                {
-                                    double sphere_position[3] = {objects[best_i].structures.sphere.position[0],objects[best_i].structures.sphere.position[1],objects[best_i].structures.sphere.position[2]};
-
-                                    double n[3] = {Ron[0] - sphere_position[0], Ron[1]-sphere_position[1], Ron[2]-sphere_position[2]}; 
-                                    normalize(n);
-                                    double vector_L[3] = {Rdn[0], Rdn[1], Rdn[2]}; 
-                                    normalize(vector_L);
-
-                                    double reflection_L[3];
-                                    normalize(reflection_L);
-                                    double V[3] = {Rd[0], Rd[1], Rd[2]};
-																			
-                                    double diffuseColor[3];
-                                    double specularColor[3];
-                                    double diffuseSpec[3];
-                                    double object_light_range[3];
-                                    v3_reflect(vector_L, n, reflection_L); 
-									
-                                    diffuseHandle(n, vector_L, objects[l].structures.light.color, objects[best_i].structures.sphere.diffuseColor, diffuseColor);
-                                    specularHandle(20, vector_L, reflection_L, n, V, objects[best_i].structures.sphere.specularColor, objects[l].structures.light.color, specularColor);
-
-                                    v3_add(diffuseColor, specularColor, diffuseSpec);
-
-                                    v3_scale(Rdn, -1, object_light_range);
-
-                                    double fang = angular_attenuation(objects, Ron, items, l);
-                                    double frad = radial_attenuation(objects[l].structures.light.radial_a1, objects[l].structures.light.radial_a2, objects[l].structures.light.radial_a0, distanceTLight);
-
-                                    color[0] += frad * fang * diffuseSpec[0];
-                                    color[1] += frad * fang * diffuseSpec[1];
-                                    color[2] += frad * fang * diffuseSpec[2];
-                                }
-
+                            normalize(Rdn);
+							bool inside = false;
+                            double bias = 0.0001;
+                            if (v3_dot(Rd,nhit) > 0){
+                                v3_scale(Rdn, -1, Rdn)
+                                inside = true;
                             }
+                                    normalize(n);
+                                    
+							double rayDir = {-Rd[0], -Rd[1], -Rd[2]};
+                            double facingratio = v3_dot(rayDir,Rdn);
+                            double fresneleffect = fres_calc(pow(1 - facingratio, 3), 1, 0.1);
+                            double refldir = v3_reflect(Rd, Rdn);
+                            normalize(refldir);
+                            double reflection[3];
+                            double nextRayO[3];
+                            v3_add(Ron, Rdn, nextRayO);
+                            v3_scale(nextRayD, bias, nextRayO);
+                            trace(objects,nextRayO, refldir, items, 1, reflection);
+
+                            double refraction = {0,0,0};
+                            if(refract > 0)
+                            {
+                                double eta = 0;
+                                if(inside) eta = indexOfRefraction;
+                                else eta = 1/indexOfRefraction;
+                                double inRdn = {-Rdn[0], -Rdn[1], -Rdn[2]};
+                                double cosi = v3_dot(inRdn, Rd);
+                                double k = 1 - pow(eta, eta) * (1 - cosi * cosi);
+                                double mathTemp = eta * cosi - sqrt(k);
+                                double refractD[3];
+                                double raydTemp[3];
+                                v3_scale(Rdn, mathTemp, raydTemp);
+                                v3_scale(Rd, eta, refractD);
+                                v3_add(refractD, raydTemp, refractD);
+                                double refractO[3];
+                                v3_scale(Rdn, bias, refractO);
+                                v3_subtract(Ron, refractO, refractO);
+
+
+                                normalize(refractD);
+                                trace(objects, refractO, refractD, items, 1, refraction);
+								
+                                color[0] += reflection[0] * fresneleffect + refraction[0] * (1 - fresneleffect) * refract * objects[best_i].properties.sphere.diffuseColor[0];
+                                color[1] += reflection[1] * fresneleffect + refraction[1] * (1 - fresneleffect) * refract * objects[best_i].properties.sphere.diffuseColor[1];;
+                                color[2] += reflection[2] * fresneleffect + refraction[2] * (1 - fresneleffect) * refract * objects[best_i].properties.sphere.diffuseColor[2];;
+                            }
+							else{
+                            color[0] = 0;
+                            color[1] = 0;
+                            color[2] = 0;
+                            for (l = 0; l < items; l++){
+                                if(strcmp(objects[l].type, "light") == 0){   
+                                    double temp[3];
+                                    double Ron[3];
+                                    double Rdn[3];
+                                    v3_scale(Rd, best_t, temp);
+                                    v3_add(temp, Ro, Ron);
+                                    v3_subtract(objects[l].structures.light.position, Ron, Rdn);
+
+                                    double distanceTLight = v3_len(Rdn);
+                                    normalize(Rdn);
+                                 
+                                    double shadow_intersect = shadeCheck(objects, Rdn, Ron, items, best_i, distanceTLight);
+                                    if(shadow_intersect != -1){   
+                                        continue;
+                                    }
+                                    else{
+\                                        double sphere_position[3] = {objects[best_i].structures.sphere.position[0],objects[best_i].structures.sphere.position[1],objects[best_i].structures.sphere.position[2]};
+
+                                        double n[3] = {Ron[0] - sphere_position[0], Ron[1]-sphere_position[1], Ron[2]-sphere_position[2]};
+
+                                        normalize(n);
+                                        double vector_L[3] = {Rdn[0], Rdn[1], Rdn[2]}; 
+                                        normalize(vector_L);
+
+                                        double reflection_L[3];
+                                        normalize(reflection_L);
+                                        double V[3] = {Rd[0], Rd[1], Rd[2]};
+                                        double diffuseColor[3];
+                                        double specularColor[3];
+                                        double diffuseSpec[3];
+                                        double object_light_range[3];
+                                        v3_reflect(vector_L, n, reflection_L); 
+                                        diffuseHandle(n, vector_L, objects[l].structures.light.color, objects[best_i].structures.sphere.diffuseColor, diffuseColor);
+                                        specularHandle(20, vector_L, reflection_L, n, V, objects[best_i].structures.sphere.specularColor, objects[l].structures.light.color, specularColor);
+
+                                        v3_add(diffuseColor, specularColor, diffuseSpec);
+
+                                        v3_scale(Rdn, -1, object_light_range);
+
+                                        double fang = angular_attenuation(objects, Ron, items, l);
+                                        double frad = radial_attenuation(objects[l].structures.light.radial_a1, objects[l].structures.light.radial_a2, objects[l].structures.light.radial_a0, distanceTLight);
+                                
+                                        color[0] += frad * fang * diffuseSpec[0];
+                                        color[1] += frad * fang * diffuseSpec[1];
+                                        color[2] += frad * fang * diffuseSpec[2];
+
+
+                                    }
+ 
+                                 }
+ 
+                             }
 
                         }
-										// Change object color 
                         buffer->image[y*3 * buffer->width + x*3].r = clamp(color[0]) *255;
                         buffer->image[y*3 * buffer->width + x*3+1].g = clamp(color[1]) *255;
                         buffer->image[y*3 * buffer->width + x*3+2].b = clamp(color[2]) *255;
