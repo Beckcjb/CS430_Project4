@@ -24,6 +24,9 @@ typedef struct Plane
 	double diffuseColor[3];
 	double specularColor[3];
     double position[3];
+		double reflectivity;
+    double refractivity;
+    double ior;
 	double normal[3];
 
 } Plane;
